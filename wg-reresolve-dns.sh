@@ -36,7 +36,6 @@ process_peer() {
 process_interface() {
   config_file=$1
   interface="$(basename $config_file .conf)"
-  log "$interface: Looking for peers that need a DNS reresolve"
   parse_peer_section=0
   pubkey=""
   endpoint=""
