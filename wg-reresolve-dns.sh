@@ -20,17 +20,25 @@ process_peer() {
   pubkey=$2
   endpoint=$3
   if [[ -z $pubkey ]] || [[ -z $endpoint ]]; then
-    return 1
+    # No need for action, no endpoint set
+    return 0
   fi
-  if [[ ! $(wg show "$interface" latest-handshakes) =~ ${pubkey//+/\\+} ]]; then
+  handshake_info=$(wg show "$interface" latest-handshakes 2>&1)
+  if [[ ! $handshake_info =~ ${pubkey//+/\\+} ]]; then
+    log "Error: Interface $interface seems to be configured incorrectly for pubkey $pubkey ($handshake_info)"
     return 1
   fi
   latest_handshake=$(wg show wg2 latest-handshakes | grep $pubkey | awk '{print $2}')
   if [[ $(($(date +%s) - $latest_handshake)) -lt 135 ]]; then
+    # latest handshake is recent enough
     return 0
   fi
-  log "$interface: Re-resolving endpoint $endpoint for peer $pubkey"
   wg set "$interface" peer "$pubkey" endpoint "$endpoint"
+  if [[ $? -ne 0 ]]; then
+    log "Warning [$interface]: Failure while re-resolving endpoint $endpoint for peer $pubkey"
+    return 1
+  fi
+  return 0
 }
 
 process_interface() {
