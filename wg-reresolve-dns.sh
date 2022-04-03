@@ -28,7 +28,7 @@ process_peer() {
     log "Error: Interface $interface seems to be configured incorrectly for pubkey $pubkey ($handshake_info)"
     return 1
   fi
-  latest_handshake=$(wg show wg2 latest-handshakes | grep $pubkey | awk '{print $2}')
+  latest_handshake=$(wg show "$interface" latest-handshakes | grep $pubkey | awk '{print $2}')
   if [[ $(($(date +%s) - $latest_handshake)) -lt 135 ]]; then
     # latest handshake is recent enough
     return 0
