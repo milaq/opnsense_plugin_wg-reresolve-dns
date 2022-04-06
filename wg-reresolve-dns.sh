@@ -10,9 +10,11 @@
 shopt -s nocasematch
 shopt -s extglob
 
+LOG_TAG="wg-reresolve-dns"
+
 log () {
-  echo "$1"
-  logger -t "wg-reresolve-dns" "$1"
+  echo "$1: $2"
+  logger -p "user.$1" -t "$LOG_TAG" "$2"
 }
 
 process_peer() {
@@ -25,18 +27,23 @@ process_peer() {
   fi
   handshake_info=$(wg show "$interface" latest-handshakes 2>&1)
   if [[ ! $handshake_info =~ ${pubkey//+/\\+} ]]; then
-    log "Error: Interface $interface seems to be configured incorrectly for pubkey $pubkey ($handshake_info)"
+    log "error" "Interface $interface seems to be configured incorrectly for pubkey $pubkey ($handshake_info)"
     return 1
   fi
-  latest_handshake=$(wg show "$interface" latest-handshakes | grep $pubkey | awk '{print $2}')
+  latest_handshake=$(wg show "$interface" latest-handshakes | grep "$pubkey" | awk '{print $2}')
   if [[ $(($(date +%s) - $latest_handshake)) -lt 135 ]]; then
     # latest handshake is recent enough
     return 0
   fi
+  endpoint_raw_old=$(wg show "$interface" endpoints | grep "$pubkey" | awk '{print $2}')
   wg set "$interface" peer "$pubkey" endpoint "$endpoint"
   if [[ $? -ne 0 ]]; then
-    log "Warning [$interface]: Failure while re-resolving endpoint $endpoint for peer $pubkey"
+    log "warning" "[$interface] Failure while re-resolving endpoint $endpoint for peer $pubkey"
     return 1
+  fi
+  endpoint_raw_new=$(wg show "$interface" endpoints | grep "$pubkey" | awk '{print $2}')
+  if [[ "$endpoint_raw_old" != "$endpoint_raw_new" ]]; then
+    log "notice" "[$interface] Successfully re-resolved endpoint $endpoint for peer $pubkey to $endpoint_raw_new"
   fi
   return 0
 }
