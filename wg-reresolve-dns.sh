@@ -83,6 +83,6 @@ process_interface() {
   fi
 }
 
-for config_file in /usr/local/etc/wireguard/wg*.conf; do
+for config_file in /usr/local/etc/wireguard/*.conf; do
   process_interface $config_file
 done
